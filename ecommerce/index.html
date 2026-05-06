@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StyleHub - Clothing Store</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <div class="navbar-container">
+            <div class="navbar-logo">
+                <i class="fas fa-shopping-bag"></i> StyleHub
+            </div>
+            <ul class="navbar-menu">
+                <li><a href="#home" class="nav-link">Home</a></li>
+                <li><a href="#products" class="nav-link">Products</a></li>
+                <li><a href="#about" class="nav-link">About</a></li>
+            </ul>
+            <div class="navbar-actions">
+                <button class="cart-icon" id="cartIcon">
+                    <i class="fas fa-shopping-cart"></i>
+                    <span class="cart-count" id="cartCount">0</span>
+                </button>
+                <button class="auth-btn" id="authBtn">Login</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero" id="home">
+        <div class="hero-content">
+            <h1>Welcome to StyleHub</h1>
+            <p>Discover the Latest Fashion Trends</p>
+            <button class="cta-btn" onclick="scrollToProducts()">Shop Now</button>
+        </div>
+    </section>
+
+    <!-- Products Section -->
+    <section class="products-section" id="products">
+        <div class="container">
+            <h2>Featured Products</h2>
+            <div class="products-grid" id="productsGrid">
+                <!-- Products will be loaded here by JavaScript -->
+            </div>
+        </div>
+    </section>
+
+    <!-- Login/Register Modal -->
+    <div class="modal" id="authModal">
+        <div class="modal-content">
+            <span class="close" onclick="closeAuthModal()">&times;</span>
+            <div class="auth-container">
+                <div class="auth-tabs">
+                    <button class="auth-tab active" onclick="switchAuthTab('login')">Login</button>
+                    <button class="auth-tab" onclick="switchAuthTab('register')">Register</button>
+                </div>
+
+                <!-- Login Form -->
+                <form id="loginForm" class="auth-form active">
+                    <h3>Login</h3>
+                    <input type="email" placeholder="Email" id="loginEmail" required>
+                    <input type="password" placeholder="Password" id="loginPassword" required>
+                    <button type="submit" class="submit-btn">Login</button>
+                    <p id="loginError" class="error-message"></p>
+                </form>
+
+                <!-- Register Form -->
+                <form id="registerForm" class="auth-form">
+                    <h3>Create Account</h3>
+                    <input type="text" placeholder="Full Name" id="registerName" required>
+                    <input type="email" placeholder="Email" id="registerEmail" required>
+                    <input type="password" placeholder="Password" id="registerPassword" required>
+                    <input type="password" placeholder="Confirm Password" id="registerConfirm" required>
+                    <button type="submit" class="submit-btn">Register</button>
+                    <p id="registerError" class="error-message"></p>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Product Details Modal -->
+    <div class="modal" id="productModal">
+        <div class="modal-content product-modal-content">
+            <span class="close" onclick="closeProductModal()">&times;</span>
+            <div class="product-details" id="productDetails">
+                <!-- Product details will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Shopping Cart Modal -->
+    <div class="modal" id="cartModal">
+        <div class="modal-content cart-modal-content">
+            <span class="close" onclick="closeCartModal()">&times;</span>
+            <h2>Shopping Cart</h2>
+            <div class="cart-items" id="cartItems">
+                <!-- Cart items will be loaded here -->
+            </div>
+            <div class="cart-summary">
+                <h3>Total: ₹<span id="cartTotal">0</span></h3>
+                <button class="checkout-btn" onclick="proceedToCheckout()">Proceed to Checkout</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Checkout Page -->
+    <div class="modal" id="checkoutModal">
+        <div class="modal-content checkout-modal-content">
+            <span class="close" onclick="closeCheckoutModal()">&times;</span>
+            <h2>Checkout</h2>
+            <form id="checkoutForm" class="checkout-form">
+                <div class="form-group">
+                    <label>Full Name</label>
+                    <input type="text" id="fullName" required>
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="checkoutEmail" required>
+                </div>
+                <div class="form-group">
+                    <label>Phone</label>
+                    <input type="tel" id="phone" required>
+                </div>
+                <div class="form-group">
+                    <label>Address</label>
+                    <textarea id="address" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label>City</label>
+                    <input type="text" id="city" required>
+                </div>
+                <div class="form-group">
+                    <label>Postal Code</label>
+                    <input type="text" id="postalCode" required>
+                </div>
+
+                <div class="order-summary">
+                    <h3>Order Summary</h3>
+                    <p>Total Items: <span id="orderItems">0</span></p>
+                    <p>Total Amount: ₹<span id="orderTotal">0</span></p>
+                </div>
+
+                <button type="button" class="pay-btn" onclick="initiatePayment()">Pay with Razorpay</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-content">
+            <p>&copy; 2024 StyleHub. All rights reserved.</p>
+            <div class="social-links">
+                <a href="#"><i class="fab fa-facebook"></i></a>
+                <a href="#"><i class="fab fa-twitter"></i></a>
+                <a href="#"><i class="fab fa-instagram"></i></a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.31.0/+esm"></script>
+    <script src="supabase-config.js"></script>
+    <script src="app.js"></script>
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <script src="payment.js"></script>
+</body>
+</html>
