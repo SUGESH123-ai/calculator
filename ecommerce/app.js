@@ -2,9 +2,18 @@
 let currentUser = null;
 let cart = [];
 let allProducts = [];
+let supabaseClient = null;
 
 // Initialize App
 document.addEventListener('DOMContentLoaded', () => {
+    // Initialize Supabase if available
+    if (typeof window.supabase !== 'undefined') {
+        const { createClient } = window.supabase;
+        const SUPABASE_URL = 'https://mrqdytkzlwlnpznsopxe.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_zGgTrafDIxkwbZOS0U1jQg_geF2vlva';
+        supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    }
+    
     loadProducts();
     checkAuthStatus();
     setupEventListeners();
@@ -14,32 +23,108 @@ document.addEventListener('DOMContentLoaded', () => {
 // Setup Event Listeners
 function setupEventListeners() {
     // Auth Forms
-    document.getElementById('loginForm').addEventListener('submit', handleLogin);
-    document.getElementById('registerForm').addEventListener('submit', handleRegister);
+    const loginForm = document.getElementById('loginForm');
+    const registerForm = document.getElementById('registerForm');
+    
+    if (loginForm) loginForm.addEventListener('submit', handleLogin);
+    if (registerForm) registerForm.addEventListener('submit', handleRegister);
     
     // Auth Button
-    document.getElementById('authBtn').addEventListener('click', () => {
-        if (currentUser) {
-            logout();
-        } else {
-            openAuthModal();
-        }
-    });
+    const authBtn = document.getElementById('authBtn');
+    if (authBtn) {
+        authBtn.addEventListener('click', () => {
+            if (currentUser) {
+                logout();
+            } else {
+                openAuthModal();
+            }
+        });
+    }
 
     // Cart Icon
-    document.getElementById('cartIcon').addEventListener('click', openCartModal);
+    const cartIcon = document.getElementById('cartIcon');
+    if (cartIcon) cartIcon.addEventListener('click', openCartModal);
 }
 
 // Load Products
 async function loadProducts() {
     try {
-        const { data, error } = await supabaseClient
-            .from('products')
-            .select('*');
+        let data = [];
         
-        if (error) throw error;
+        // Try to load from Supabase
+        if (supabaseClient) {
+            try {
+                const { data: products, error } = await supabaseClient
+                    .from('products')
+                    .select('*');
+                
+                if (!error && products) {
+                    data = products;
+                }
+            } catch (e) {
+                console.log('Using fallback products...');
+            }
+        }
         
-        allProducts = data || [
+        // Use default products if no data from Supabase
+        if (data.length === 0) {
+            data = [
+                {
+                    id: 1,
+                    name: 'Classic T-Shirt',
+                    category: 'Tops',
+                    price: 499,
+                    image: 'https://via.placeholder.com/300x300?text=T-Shirt',
+                    description: 'Comfortable and stylish classic t-shirt made from 100% cotton. Perfect for everyday wear.'
+                },
+                {
+                    id: 2,
+                    name: 'Denim Jeans',
+                    category: 'Bottoms',
+                    price: 1299,
+                    image: 'https://via.placeholder.com/300x300?text=Jeans',
+                    description: 'High-quality denim jeans with a perfect fit. Available in multiple sizes and colors.'
+                },
+                {
+                    id: 3,
+                    name: 'Summer Dress',
+                    category: 'Dresses',
+                    price: 899,
+                    image: 'https://via.placeholder.com/300x300?text=Dress',
+                    description: 'Light and airy summer dress perfect for warm weather. Easy to style and versatile.'
+                },
+                {
+                    id: 4,
+                    name: 'Casual Jacket',
+                    category: 'Outerwear',
+                    price: 1599,
+                    image: 'https://via.placeholder.com/300x300?text=Jacket',
+                    description: 'Stylish casual jacket that goes with almost any outfit. Comfortable and durable.'
+                },
+                {
+                    id: 5,
+                    name: 'White Sneakers',
+                    category: 'Shoes',
+                    price: 2499,
+                    image: 'https://via.placeholder.com/300x300?text=Sneakers',
+                    description: 'Premium white sneakers perfect for casual wear. Comfortable and long-lasting.'
+                },
+                {
+                    id: 6,
+                    name: 'Polo Shirt',
+                    category: 'Tops',
+                    price: 699,
+                    image: 'https://via.placeholder.com/300x300?text=Polo',
+                    description: 'Classic polo shirt in various colors. Perfect for both casual and semi-formal occasions.'
+                }
+            ];
+        }
+        
+        allProducts = data;
+        displayProducts(allProducts);
+    } catch (error) {
+        console.error('Error loading products:', error);
+        displayProducts([
             {
                 id: 1,
                 name: 'Classic T-Shirt',
@@ -88,17 +173,15 @@ async function loadProducts() {
                 image: 'https://via.placeholder.com/300x300?text=Polo',
                 description: 'Classic polo shirt in various colors. Perfect for both casual and semi-formal occasions.'
             }
-        ];
-        
-        displayProducts(allProducts);
-    } catch (error) {
-        console.error('Error loading products:', error.message);
+        ]);
     }
 }
 
 // Display Products
 function displayProducts(products) {
     const productsGrid = document.getElementById('productsGrid');
+    if (!productsGrid) return;
+    
     productsGrid.innerHTML = '';
     
     products.forEach(product => {
@@ -126,6 +209,8 @@ function viewProduct(productId) {
     if (!product) return;
     
     const productDetails = document.getElementById('productDetails');
+    if (!productDetails) return;
+    
     productDetails.innerHTML = `
         <div class="product-details">
             <img src="${product.image}" alt="${product.name}" class="product-details-image">
@@ -150,12 +235,12 @@ function viewProduct(productId) {
 // Quantity Controls
 function increaseQuantity() {
     const input = document.getElementById('productQuantity');
-    input.value = parseInt(input.value) + 1;
+    if (input) input.value = parseInt(input.value) + 1;
 }
 
 function decreaseQuantity() {
     const input = document.getElementById('productQuantity');
-    if (parseInt(input.value) > 1) {
+    if (input && parseInt(input.value) > 1) {
         input.value = parseInt(input.value) - 1;
     }
 }
@@ -182,7 +267,8 @@ function addToCart(productId) {
 
 // Add to Cart from Product Modal
 function addToCartFromModal(productId) {
-    const quantity = parseInt(document.getElementById('productQuantity').value);
+    const quantityInput = document.getElementById('productQuantity');
+    const quantity = quantityInput ? parseInt(quantityInput.value) : 1;
     const product = allProducts.find(p => p.id === productId);
     if (!product) return;
     
@@ -205,6 +291,7 @@ function addToCartFromModal(productId) {
 // Update Cart Count
 function updateCartCount() {
     const cartCount = document.getElementById('cartCount');
+    if (!cartCount) return;
     const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
     cartCount.textContent = totalItems;
 }
@@ -218,8 +305,12 @@ function saveCartToLocalStorage() {
 function loadCartFromLocalStorage() {
     const savedCart = localStorage.getItem('cart');
     if (savedCart) {
-        cart = JSON.parse(savedCart);
-        updateCartCount();
+        try {
+            cart = JSON.parse(savedCart);
+            updateCartCount();
+        } catch (e) {
+            console.error('Error loading cart:', e);
+        }
     }
 }
 
@@ -227,6 +318,8 @@ function loadCartFromLocalStorage() {
 function displayCart() {
     const cartItems = document.getElementById('cartItems');
     const cartTotal = document.getElementById('cartTotal');
+    
+    if (!cartItems || !cartTotal) return;
     
     if (cart.length === 0) {
         cartItems.innerHTML = '<div class="empty-cart">Your cart is empty</div>';
@@ -293,6 +386,11 @@ async function handleLogin(e) {
     const password = document.getElementById('loginPassword').value;
     const loginError = document.getElementById('loginError');
     
+    if (!supabaseClient) {
+        if (loginError) loginError.textContent = 'Supabase not configured';
+        return;
+    }
+    
     try {
         const { data, error } = await supabaseClient.auth.signInWithPassword({
             email: email,
@@ -300,7 +398,7 @@ async function handleLogin(e) {
         });
         
         if (error) {
-            loginError.textContent = error.message;
+            if (loginError) loginError.textContent = error.message;
             return;
         }
         
@@ -309,7 +407,7 @@ async function handleLogin(e) {
         updateAuthButton();
         showNotification('Login successful!');
     } catch (error) {
-        loginError.textContent = error.message;
+        if (loginError) loginError.textContent = error.message;
     }
 }
 
@@ -322,7 +420,12 @@ async function handleRegister(e) {
     const registerError = document.getElementById('registerError');
     
     if (password !== confirmPassword) {
-        registerError.textContent = 'Passwords do not match';
+        if (registerError) registerError.textContent = 'Passwords do not match';
+        return;
+    }
+    
+    if (!supabaseClient) {
+        if (registerError) registerError.textContent = 'Supabase not configured';
         return;
     }
     
@@ -333,23 +436,27 @@ async function handleRegister(e) {
         });
         
         if (error) {
-            registerError.textContent = error.message;
+            if (registerError) registerError.textContent = error.message;
             return;
         }
         
-        registerError.textContent = '';
-        registerError.style.color = '#10b981';
-        registerError.textContent = 'Registration successful! Please check your email.';
+        if (registerError) {
+            registerError.textContent = '';
+            registerError.style.color = '#10b981';
+            registerError.textContent = 'Registration successful! Please check your email.';
+        }
         
         setTimeout(() => {
             switchAuthTab('login');
         }, 2000);
     } catch (error) {
-        registerError.textContent = error.message;
+        if (registerError) registerError.textContent = error.message;
     }
 }
 
 async function checkAuthStatus() {
+    if (!supabaseClient) return;
+    
     try {
         const { data: { user } } = await supabaseClient.auth.getUser();
         if (user) {
@@ -362,6 +469,8 @@ async function checkAuthStatus() {
 }
 
 async function logout() {
+    if (!supabaseClient) return;
+    
     try {
         await supabaseClient.auth.signOut();
         currentUser = null;
@@ -374,6 +483,8 @@ async function logout() {
 
 function updateAuthButton() {
     const authBtn = document.getElementById('authBtn');
+    if (!authBtn) return;
+    
     if (currentUser) {
         authBtn.textContent = 'Logout';
     } else {
@@ -383,40 +494,57 @@ function updateAuthButton() {
 
 // Modal Functions
 function openAuthModal() {
-    document.getElementById('authModal').classList.add('active');
+    const authModal = document.getElementById('authModal');
+    if (authModal) authModal.classList.add('active');
 }
 
 function closeAuthModal() {
-    document.getElementById('authModal').classList.remove('active');
-    document.getElementById('loginForm').reset();
-    document.getElementById('registerForm').reset();
-    document.getElementById('loginError').textContent = '';
-    document.getElementById('registerError').textContent = '';
+    const authModal = document.getElementById('authModal');
+    if (!authModal) return;
+    
+    authModal.classList.remove('active');
+    
+    const loginForm = document.getElementById('loginForm');
+    const registerForm = document.getElementById('registerForm');
+    const loginError = document.getElementById('loginError');
+    const registerError = document.getElementById('registerError');
+    
+    if (loginForm) loginForm.reset();
+    if (registerForm) registerForm.reset();
+    if (loginError) loginError.textContent = '';
+    if (registerError) registerError.textContent = '';
 }
 
 function switchAuthTab(tab) {
     document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
     
-    event.target.classList.add('active');
-    document.getElementById(tab + 'Form').classList.add('active');
+    const tabElement = event.target;
+    if (tabElement) tabElement.classList.add('active');
+    
+    const formElement = document.getElementById(tab + 'Form');
+    if (formElement) formElement.classList.add('active');
 }
 
 function openProductModal() {
-    document.getElementById('productModal').classList.add('active');
+    const productModal = document.getElementById('productModal');
+    if (productModal) productModal.classList.add('active');
 }
 
 function closeProductModal() {
-    document.getElementById('productModal').classList.remove('active');
+    const productModal = document.getElementById('productModal');
+    if (productModal) productModal.classList.remove('active');
 }
 
 function openCartModal() {
     displayCart();
-    document.getElementById('cartModal').classList.add('active');
+    const cartModal = document.getElementById('cartModal');
+    if (cartModal) cartModal.classList.add('active');
 }
 
 function closeCartModal() {
-    document.getElementById('cartModal').classList.remove('active');
+    const cartModal = document.getElementById('cartModal');
+    if (cartModal) cartModal.classList.remove('active');
 }
 
 function proceedToCheckout() {
@@ -439,6 +567,10 @@ function proceedToCheckout() {
 function openCheckoutModal() {
     const orderItems = document.getElementById('orderItems');
     const orderTotal = document.getElementById('orderTotal');
+    const checkoutEmail = document.getElementById('checkoutEmail');
+    const checkoutModal = document.getElementById('checkoutModal');
+    
+    if (!orderItems || !orderTotal || !checkoutModal) return;
     
     const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
     const totalAmount = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
@@ -447,20 +579,24 @@ function openCheckoutModal() {
     orderTotal.textContent = totalAmount;
     
     // Pre-fill email if user is logged in
-    if (currentUser) {
-        document.getElementById('checkoutEmail').value = currentUser.email;
+    if (currentUser && checkoutEmail) {
+        checkoutEmail.value = currentUser.email;
     }
     
-    document.getElementById('checkoutModal').classList.add('active');
+    checkoutModal.classList.add('active');
 }
 
 function closeCheckoutModal() {
-    document.getElementById('checkoutModal').classList.remove('active');
+    const checkoutModal = document.getElementById('checkoutModal');
+    if (checkoutModal) checkoutModal.classList.remove('active');
 }
 
 // Utility Functions
 function scrollToProducts() {
-    document.getElementById('products').scrollIntoView({ behavior: 'smooth' });
+    const productsSection = document.getElementById('products');
+    if (productsSection) {
+        productsSection.scrollIntoView({ behavior: 'smooth' });
+    }
 }
 
 function showNotification(message) {
